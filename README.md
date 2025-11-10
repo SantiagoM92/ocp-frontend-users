@@ -60,3 +60,9 @@ docker run -p 4173:4173 --env VITE_API_USER_ORIGIN=http://tu-backend:8081 simple
 ```
 
 Si necesitas otra URL para el backend, ajusta cualquiera de esas variables en tiempo de ejecución o define el valor antes de construir la imagen.
+
+## Helm & CI/CD
+
+- El chart para Kubernetes vive en `helm/frontend-users` e incluye despliegue, Service, Ingress opcional y HPA. Ajusta `values.yaml` o pasa `--set`/`-f` con `config.apiBaseUrl` y parámetros de imagen.
+- Para exponer el servicio en OpenShift puedes habilitar `route.enabled=true` (y opcionalmente definir `route.host`, `route.termination` e `route.insecurePolicy`) o bien usar el Ingress estándar del cluster.
+- El pipeline de GitHub Actions (`.github/workflows/frontend-ci-cd.yml`) construye la app, arma la imagen, la publica y ejecuta `helm upgrade --install`. Requiere secretos: `REGISTRY_HOST`, `REGISTRY_NAMESPACE`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD`, `FRONTEND_API_BASE_URL`, `OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `OPENSHIFT_NAMESPACE` y opcionalmente `OPENSHIFT_SKIP_TLS_VERIFY`.
