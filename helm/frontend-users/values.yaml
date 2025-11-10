@@ -1,0 +1,55 @@
+replicaCount: 2
+
+image:
+  repository: frontend-users
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 4173
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: frontend.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+route:
+  enabled: false
+  host: ""
+  termination: edge # edge | passthrough | reencrypt
+  insecurePolicy: Redirect # Redirect | Allow | None
+  annotations: {}
+
+config:
+  apiBaseUrl: http://localhost:8081
+
+env:
+  additional: []
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
