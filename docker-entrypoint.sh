@@ -14,7 +14,7 @@ TMP_CONF_DIR="${TMP_CONF_DIR:-/tmp/nginx}"
 mkdir -p "${TMP_CONF_DIR}"
 
 TEMPLATE_SRC="${NGINX_TEMPLATE_PATH:-/etc/nginx/conf.d/default.conf.template}"
-TEMPLATE_DEST="${TMP_CONF_DIR}/default.conf"
+TEMPLATE_DEST="${TMP_CONF_DIR}/nginx.conf"
 
 envsubst '${API_PROXY_TARGET} ${NGINX_LISTEN_PORT}' < "${TEMPLATE_SRC}" > "${TEMPLATE_DEST}"
 
