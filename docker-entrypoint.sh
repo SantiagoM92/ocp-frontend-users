@@ -10,6 +10,12 @@ NGINX_LISTEN_PORT="${NGINX_LISTEN_PORT:-4173}"
 export API_PROXY_TARGET
 export NGINX_LISTEN_PORT
 
-envsubst '${API_PROXY_TARGET} ${NGINX_LISTEN_PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
+TMP_CONF_DIR="${TMP_CONF_DIR:-/tmp/nginx}"
+mkdir -p "${TMP_CONF_DIR}"
 
-exec nginx -g 'daemon off;'
+TEMPLATE_SRC="${NGINX_TEMPLATE_PATH:-/etc/nginx/conf.d/default.conf.template}"
+TEMPLATE_DEST="${TMP_CONF_DIR}/default.conf"
+
+envsubst '${API_PROXY_TARGET} ${NGINX_LISTEN_PORT}' < "${TEMPLATE_SRC}" > "${TEMPLATE_DEST}"
+
+exec nginx -g 'daemon off;' -c "${TEMPLATE_DEST}"
