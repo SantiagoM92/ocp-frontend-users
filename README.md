@@ -16,6 +16,13 @@ VITE_API_BASE_URL=http://localhost:8081
 VITE_API_USER_ORIGIN=http://localhost:8081
 ```
 
+En despliegues sobre OpenShift se recomienda dejar `VITE_API_BASE_URL` vacío para que el frontend utilice peticiones relativas (`/api/...`) y que el reverse proxy interno redirija al backend.
+
+En el chart Helm hay dos valores relevantes:
+
+- `config.apiBaseUrl`: URL pública que consumirá el navegador. Déjala vacía para que utilice la misma ruta del frontend (`/api/...`).
+- `config.proxyTargetUrl`: URL interna (por ejemplo `http://backend-api`) que usa Nginx dentro del pod para reenviar las peticiones `/api`.
+
 ## Pasos para ejecutar
 
 1. Instala las dependencias:
@@ -57,12 +64,16 @@ Ejecutar el contenedor (expone el puerto por defecto 4173):
 docker run -p 4173:4173 --env VITE_API_BASE_URL=http://tu-backend:8081 simple-react-app
 # …o usando la variable alternativa
 docker run -p 4173:4173 --env VITE_API_USER_ORIGIN=http://tu-backend:8081 simple-react-app
+# El reverse proxy interno utiliza la variable API_PROXY_TARGET
+docker run -p 4173:4173 \
+  --env API_PROXY_TARGET=http://backend-api \
+  simple-react-app
 ```
 
 Si necesitas otra URL para el backend, ajusta cualquiera de esas variables en tiempo de ejecución o define el valor antes de construir la imagen.
 
 ## Helm & CI/CD
 
-- El chart para Kubernetes vive en `helm/frontend-users` e incluye despliegue, Service, Ingress opcional y HPA. Ajusta `values.yaml` o pasa `--set`/`-f` con `config.apiBaseUrl` y parámetros de imagen.
+- El chart para Kubernetes vive en `helm/frontend-users` e incluye despliegue, Service, Ingress opcional, Route opcional y HPA. Usa `config.apiBaseUrl` para la URL pública que debería invocar el navegador (déjala vacía para que use `/api/...`) y `config.proxyTargetUrl` para el servicio interno (por ejemplo `http://backend-api`).
 - Para exponer el servicio en OpenShift puedes habilitar `route.enabled=true` (y opcionalmente definir `route.host`, `route.termination` e `route.insecurePolicy`) o bien usar el Ingress estándar del cluster.
-- El pipeline de GitHub Actions (`.github/workflows/frontend-ci-cd.yml`) construye la app, arma la imagen, la publica y ejecuta `helm upgrade --install`. Requiere secretos: `REGISTRY_HOST`, `REGISTRY_NAMESPACE`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD`, `FRONTEND_API_BASE_URL`, `OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `OPENSHIFT_NAMESPACE` y opcionalmente `OPENSHIFT_SKIP_TLS_VERIFY`.
+- El pipeline de GitHub Actions (`.github/workflows/frontend-ci-cd.yml`) construye la app, arma la imagen, la publica y ejecuta `helm upgrade --install`. Requiere secretos: `REGISTRY_HOST`, `REGISTRY_NAMESPACE`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD`, `FRONTEND_API_BASE_URL` (service interno para el proxy), `OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `OPENSHIFT_NAMESPACE` y opcionalmente `OPENSHIFT_SKIP_TLS_VERIFY`. Puedes añadir `FRONTEND_PUBLIC_API_BASE_URL` si en algún entorno quieres que el navegador consuma un endpoint público diferente en lugar del proxy interno.

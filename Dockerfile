@@ -6,11 +6,14 @@ RUN npm install --production=false
 COPY . .
 RUN npm run build
 
-# Stage 2: serve the static files
-FROM node:20-alpine AS runtime
-WORKDIR /app
-COPY --from=build /app/dist ./dist
-RUN npm install -g serve@14
+# Stage 2: serve the static files behind nginx (with proxy)
+FROM nginx:1.27-alpine AS runtime
+WORKDIR /usr/share/nginx/html
+RUN apk add --no-cache gettext
+COPY --from=build /app/dist .
+COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
+COPY docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 EXPOSE 4173
-ENV PORT=4173
-CMD ["serve", "-s", "dist", "-l", "tcp://0.0.0.0:4173"]
+ENV NGINX_LISTEN_PORT=4173
+ENTRYPOINT ["/entrypoint.sh"]

@@ -7,3 +7,4 @@ metadata:
 data:
   VITE_API_BASE_URL: {{ .Values.config.apiBaseUrl | quote }}
   VITE_API_USER_ORIGIN: {{ .Values.config.apiBaseUrl | quote }}
+  API_PROXY_TARGET: {{ .Values.config.proxyTargetUrl | quote }}

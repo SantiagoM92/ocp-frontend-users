@@ -34,6 +34,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "frontend-users.configMapName" . }}
                   key: VITE_API_USER_ORIGIN
+            - name: API_PROXY_TARGET
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "frontend-users.configMapName" . }}
+                  key: API_PROXY_TARGET
             {{- range .Values.env.additional }}
             - name: {{ .name }}
               value: {{ .value | quote }}

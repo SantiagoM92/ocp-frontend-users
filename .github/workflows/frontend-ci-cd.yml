@@ -36,7 +36,7 @@ jobs:
 
       - name: Run build
         env:
-          VITE_API_BASE_URL: ${{ secrets.FRONTEND_API_BASE_URL }}
+          VITE_API_BASE_URL: ${{ secrets.FRONTEND_PUBLIC_API_BASE_URL }}
         run: npm run build
 
       - name: Compute image reference
@@ -94,13 +94,25 @@ jobs:
       - name: Deploy Helm release
         env:
           FRONTEND_API_BASE_URL: ${{ secrets.FRONTEND_API_BASE_URL }}
+          FRONTEND_PUBLIC_API_BASE_URL: ${{ secrets.FRONTEND_PUBLIC_API_BASE_URL }}
         run: |
           if [ -z "${FRONTEND_API_BASE_URL}" ]; then
             echo "Secret FRONTEND_API_BASE_URL must be provided" >&2
             exit 1
           fi
-          helm upgrade --install "${RELEASE_NAME}" "${CHART_PATH}" \
-            --namespace "${OPENSHIFT_NAMESPACE}" \
-            --set image.repository="${IMAGE_REPOSITORY}" \
-            --set image.tag="${IMAGE_TAG}" \
-            --set config.apiBaseUrl="${FRONTEND_API_BASE_URL}"
+          HELM_ARGS=()
+          if [ -n "${FRONTEND_PUBLIC_API_BASE_URL}" ]; then
+            HELM_ARGS+=(--set-string "config.apiBaseUrl=${FRONTEND_PUBLIC_API_BASE_URL}")
+          fi
+
+          HELM_CMD=(helm upgrade --install "${RELEASE_NAME}" "${CHART_PATH}"
+            --namespace "${OPENSHIFT_NAMESPACE}"
+            --set "image.repository=${IMAGE_REPOSITORY}"
+            --set "image.tag=${IMAGE_TAG}"
+            --set "config.proxyTargetUrl=${FRONTEND_API_BASE_URL}")
+
+          if [ "${#HELM_ARGS[@]}" -gt 0 ]; then
+            HELM_CMD+=("${HELM_ARGS[@]}")
+          fi
+
+          "${HELM_CMD[@]}"

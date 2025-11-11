@@ -22,14 +22,15 @@ ingress:
   tls: []
 
 route:
-  enabled: true
+  enabled: false
   host: ""
   termination: edge # edge | passthrough | reencrypt
   insecurePolicy: Redirect # Redirect | Allow | None
   annotations: {}
 
 config:
-  apiBaseUrl: http://localhost:8081
+  apiBaseUrl: ""
+  proxyTargetUrl: http://backend-api
 
 env:
   additional: []
