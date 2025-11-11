@@ -22,7 +22,7 @@ ingress:
   tls: []
 
 route:
-  enabled: false
+  enabled: true
   host: ""
   termination: edge # edge | passthrough | reencrypt
   insecurePolicy: Redirect # Redirect | Allow | None

@@ -11,8 +11,8 @@ FROM nginx:1.27-alpine AS runtime
 WORKDIR /usr/share/nginx/html
 RUN apk add --no-cache gettext
 COPY --from=build /app/dist .
-COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
-COPY docker-entrypoint.sh /entrypoint.sh
+COPY --from=build /app/nginx.conf.template /etc/nginx/conf.d/default.conf.template
+COPY --from=build /app/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 EXPOSE 4173
 ENV NGINX_LISTEN_PORT=4173
