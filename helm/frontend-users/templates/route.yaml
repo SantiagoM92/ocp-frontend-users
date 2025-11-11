@@ -19,7 +19,9 @@ spec:
   {{- if .Values.route.host }}
   host: {{ .Values.route.host }}
   {{- end }}
+  {{- if .Values.route.termination }}
   tls:
     termination: {{ .Values.route.termination }}
-    insecureEdgeTerminationPolicy: {{ .Values.route.insecurePolicy }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.insecurePolicy | default "Redirect" }}
+  {{- end }}
 {{- end }}
