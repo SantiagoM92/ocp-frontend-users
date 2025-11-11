@@ -1,12 +1,5 @@
 import { useState } from 'react';
-
-const rawApiBase =
-  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_USER_ORIGIN ?? '';
-const trimmedBase = typeof rawApiBase === 'string' ? rawApiBase.trim() : '';
-const API_BASE_URL =
-  trimmedBase && trimmedBase !== '/' ? trimmedBase.replace(/\/$/, '') : '';
-const API_PATH = '/api/users';
-const API_URL = API_BASE_URL ? `${API_BASE_URL}${API_PATH}` : API_PATH;
+const API_URL = '/api/users';
 
 function App() {
   const [prefix, setPrefix] = useState('sa');
