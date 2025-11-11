@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --production=false
 COPY . .
+COPY nginx.conf.template ./nginx.conf.template
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN npm run build
 
 # Stage 2: serve the static files behind nginx (with proxy)

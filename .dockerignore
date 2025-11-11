@@ -5,3 +5,5 @@ npm-debug.log
 yarn-error.log
 .pnpm-store
 .git
+!nginx.conf.template
+!docker-entrypoint.sh
