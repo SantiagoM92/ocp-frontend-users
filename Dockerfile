@@ -13,4 +13,4 @@ COPY --from=build /app/dist ./dist
 RUN npm install -g serve@14
 EXPOSE 4173
 ENV PORT=4173
-CMD ["serve", "-s", "dist", "-l", "0.0.0.0:4173"]
+CMD ["serve", "-s", "dist", "-l", "tcp://0.0.0.0:4173"]
