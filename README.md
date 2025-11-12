@@ -1,7 +1,8 @@
 # Ejecución
 
+![Ejecución de la Aplicación](example.png)
 
-
+![Datos de la BDD](db.png)
 
 # Arquitectura OCP - Plataforma Fisa
 
