@@ -1,79 +1,67 @@
-# Simple React User Lookup
+# Ejecución
 
-Aplicación mínima en React que consulta el endpoint `http://localhost:8081/api/users` filtrando por prefijo.
 
-## Requisitos
 
-- Node.js 18 o superior
-- Backend disponible en `http://localhost:8081`
 
-## Configuración de variables
+# Arquitectura OCP - Plataforma Fisa
 
-El backend se configura mediante `VITE_API_BASE_URL` o, si prefieres el nombre original, `VITE_API_USER_ORIGIN`. Ambas son equivalentes y puedes definirlas en `.env` o en un `.env.local` (ya ignorado por git):
+## Diagrama general
 
-```
-VITE_API_BASE_URL=http://localhost:8081
-VITE_API_USER_ORIGIN=http://localhost:8081
-```
+```mermaid
+flowchart LR
+    subgraph OCP["OpenShift Cluster"]
 
-En despliegues sobre OpenShift se recomienda dejar `VITE_API_BASE_URL` vacío para que el frontend utilice peticiones relativas (`/api/...`) y que el reverse proxy interno redirija al backend.
+        subgraph Route["OCP Route / Ingress"]
+            UIRoute["https Route\nfrontend-users"]
+        end
 
-En el chart Helm hay dos valores relevantes:
+        subgraph Frontend["frontend-users (React + Reverse Proxy)"]
+            ReactApp["React SPA"]
+            Proxy["Reverse Proxy\n(Nginx/Node)"]
+        end
 
-- `config.apiBaseUrl`: URL pública que consumirá el navegador. Déjala vacía para que utilice la misma ruta del frontend (`/api/...`).
-- `config.proxyTargetUrl`: URL interna (por ejemplo `http://backend-api`) que usa Nginx dentro del pod para reenviar las peticiones `/api`.
+        subgraph API["backend-api (Spring Boot)"]
+            ApiPod["REST Controllers\nBusiness Services"]
+        end
 
-## Pasos para ejecutar
+        subgraph Data["backend-data (Spring Boot)"]
+            DataPod["REST Aggregator\nIntegration Services"]
+        end
 
-1. Instala las dependencias:
+        subgraph DB["ocp-db-users (Postgres)"]
+            DBPod["Postgres Pod"]
+            PVC["PersistentVolumeClaim"]
+        end
 
-   ```bash
-   npm install
-   ```
+        Configs["Secrets/ConfigMaps"]:::config
+    end
 
-2. Inicia el entorno de desarrollo:
+    UIRoute --> ReactApp
+    ReactApp --> Proxy
+    Proxy -->|REST / HTTPS| ApiPod
+    ApiPod -->|REST / HTTPS| DataPod
+    DataPod -->|JDBC / SSL| DBPod
+    DBPod --- PVC
+    Configs -.-> Proxy
+    Configs -.-> ApiPod
+    Configs -.-> DataPod
+    Configs -.-> DBPod
 
-   ```bash
-   npm run dev
-   ```
-
-3. Abre el navegador en la URL indicada por Vite (por defecto `http://localhost:3000`).
-
-4. Ingresa un prefijo en la caja de texto (por defecto está precargado con `sa`) y presiona **Consultar** para ver los resultados.
-
-## Build para producción
-
-```bash
-npm run build
-npm run preview
-```
-
-`npm run preview` sirve los archivos generados en `dist/` para validarlos de manera local.
-
-## Docker
-
-Construir la imagen:
-
-```bash
-docker build -t simple-react-app .
+    classDef config fill:#fef3c7,stroke:#d97706,color:#92400e;
 ```
 
-Ejecutar el contenedor (expone el puerto por defecto 4173):
+## Descripción de repositorios
 
-```bash
-docker run -p 4173:4173 --env VITE_API_BASE_URL=http://tu-backend:8081 simple-react-app
-# …o usando la variable alternativa
-docker run -p 4173:4173 --env VITE_API_USER_ORIGIN=http://tu-backend:8081 simple-react-app
-# El reverse proxy interno utiliza la variable API_PROXY_TARGET
-docker run -p 4173:4173 \
-  --env API_PROXY_TARGET=http://backend-api \
-  simple-react-app
-```
+- `ocp-frontend-users`: Contiene la SPA en React y el reverse proxy (por ejemplo Nginx) que publica la UI y reenvía solicitudes al backend dentro del clúster OCP. Incluye la configuración de rutas, variables de entorno y activos estáticos.
+- `ocp-backend-api`: Servicio Spring Boot que expone el API REST principal consumido por el frontend. Implementa lógica de negocio, validaciones y orquestación hacia el servicio de datos. Opera como microservicio independiente desplegado en un Deployment OCP con su Service asociado.
+- `ocp-backend-data`: Servicio Spring Boot orientado a datos. Expone un API REST interno utilizado por `backend-api` para acceder a información persistida. Encapsula la lógica de integración con la base de datos y gestiona el acceso transaccional.
+- `ocp-db-users`: Manifiestos y/o helm chart del micro de base de datos Postgres. Define el StatefulSet (o Deployment), Service interno, credenciales, y un PVC que garantiza persistencia de datos.
+- `ocp-security`: Referente a RBAC y Network Policies.
 
-Si necesitas otra URL para el backend, ajusta cualquiera de esas variables en tiempo de ejecución o define el valor antes de construir la imagen.
+## Flujo de comunicación
 
-## Helm & CI/CD
-
-- El chart para Kubernetes vive en `helm/frontend-users` e incluye despliegue, Service, Ingress opcional, Route opcional y HPA. Usa `config.apiBaseUrl` para la URL pública que debería invocar el navegador (déjala vacía para que use `/api/...`) y `config.proxyTargetUrl` para el servicio interno (por ejemplo `http://backend-api`).
-- Para exponer el servicio en OpenShift puedes habilitar `route.enabled=true` (y opcionalmente definir `route.host`, `route.termination` e `route.insecurePolicy`) o bien usar el Ingress estándar del cluster.
-- El pipeline de GitHub Actions (`.github/workflows/frontend-ci-cd.yml`) construye la app, arma la imagen, la publica y ejecuta `helm upgrade --install`. Requiere secretos: `REGISTRY_HOST`, `REGISTRY_NAMESPACE`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD`, `FRONTEND_API_BASE_URL` (service interno para el proxy), `OPENSHIFT_SERVER`, `OPENSHIFT_TOKEN`, `OPENSHIFT_NAMESPACE` y opcionalmente `OPENSHIFT_SKIP_TLS_VERIFY`. Puedes añadir `FRONTEND_PUBLIC_API_BASE_URL` si en algún entorno quieres que el navegador consuma un endpoint público diferente en lugar del proxy interno.
+1. **Entrada externa**: Los usuarios acceden mediante una Route/Ingress de OCP que termina TLS y dirige tráfico al POD del `frontend-users`.
+2. **Frontend + proxy**: La SPA React maneja UX y se apoya en el reverse proxy para reenviar solicitudes REST autenticadas hacia el Service de `backend-api`.
+3. **Capa de negocio (backend-api)**: Procesa reglas de negocio, aplica validaciones y delega operaciones CRUD o consultas complejas al `backend-data`.
+4. **Capa de datos (backend-data)**: Expone endpoints internos especializados y consolida el acceso a Postgres usando JDBC/Spring Data, manteniendo conexiones reutilizables y manejando la lógica transaccional.
+5. **Persistencia**: `ocp-db-users` ejecuta Postgres dentro de OCP. Los datos se almacenan en un PVC, lo que permite reinicios del pod sin pérdida de información.
